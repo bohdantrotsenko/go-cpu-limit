@@ -22,7 +22,8 @@ func load(counter *int32, errChan chan error) {
 	}()
 
 	before := time.Now()
-	resp, err := http.Get(*target)
+	cli := &http.Client{}
+	resp, err := cli.Get(*target)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}

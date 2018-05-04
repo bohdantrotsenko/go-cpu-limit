@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"sync/atomic"
 	"time"
 )
@@ -31,7 +32,7 @@ type srv struct {
 }
 
 func (s *srv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	atomic.AddInt32(&s.counter, 1)
+	id := atomic.AddInt32(&s.counter, 1)
 	defer atomic.AddInt32(&s.counter, -1)
 	if r.RequestURI == "/status" {
 		http.Error(w, "All fine", http.StatusOK)
@@ -39,10 +40,11 @@ func (s *srv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.RequestURI == "/load" {
+		log.Printf("[id = %d] starting f()\n", id)
 		before := time.Now()
 		_ = f()
 		duration := time.Now().Sub(before)
-		fmt.Printf("run f() in %s, total: %d requests\n", duration, atomic.LoadInt32(&s.counter))
+		log.Printf("[id = %d] run f() in %s, total: %d requests\n", id, duration, atomic.LoadInt32(&s.counter))
 		http.Error(w, duration.String(), http.StatusOK)
 		return
 	}
@@ -55,7 +57,8 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("listen %s", err)
 	}
-	log.Printf("Listening on %s\n", *addr)
+	log.Printf("Listening on %s, pid = %d\n", *addr, os.Getpid())
+
 	service := &srv{}
 	httpSrv := &http.Server{Handler: service}
 
